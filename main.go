@@ -3,15 +3,27 @@ package main
 import (
 	"booking-app/helper"
 	"fmt"
-	"strconv"
+	"sync"
+	"time"
 )
 
 const conferenceTickets = 50
 
 var conferenceName = "Go Conference"
 var RemainingTickets uint = 50
-var bookings = make([]map[string]string, 0)
+var bookings = make([]UserData, 0)
 
+// customized data type to which can contain diff data types unlike map
+type UserData struct {
+	firstName   string
+	lastName    string
+	email       string
+	noOfTickets uint
+}
+
+var wg = sync.WaitGroup{}
+
+// Main Function
 func main() {
 
 	greetUsers()
@@ -28,6 +40,8 @@ func main() {
 				fmt.Printf("%v Remaining tickets for %v\n", RemainingTickets, conferenceName)
 				firstNames := getFirstNames(bookings)
 				fmt.Printf("The first Names of bookings are : %v \n", firstNames)
+				wg.Add(1)
+				go sendTickets(userTickets, firstName, lastName, email)
 
 			} else {
 				if !isValidEmail {
@@ -47,22 +61,26 @@ func main() {
 		}
 
 	}
+	wg.Wait()
 }
 
+// Function to Greet Users
 func greetUsers() {
 	fmt.Printf("Welcome to %v Booking App\n", conferenceName)
 	fmt.Printf("We have total of %v tickets and %v are still available\n", conferenceTickets, RemainingTickets)
 	fmt.Println("Get your tickets here to attend the conference")
 }
 
-func getFirstNames(bookings []map[string]string) []string {
+// Function to extract firstNames
+func getFirstNames(bookings []UserData) []string {
 	firstNames := []string{}
 	for _, booking := range bookings {
-		firstNames = append(firstNames, booking["firstName"])
+		firstNames = append(firstNames, booking.firstName)
 	}
 	return firstNames
 }
 
+// Function to get user data
 func getUserData() (string, string, string, uint) {
 	var firstName string
 	var lastName string
@@ -84,21 +102,30 @@ func getUserData() (string, string, string, uint) {
 	return firstName, lastName, email, userTickets
 }
 
-func bookTickets(userTickets uint, firstName string, lastName string, email string) (uint, []map[string]string) {
+// Function to book tickets
+func bookTickets(userTickets uint, firstName string, lastName string, email string) (uint, []UserData) {
 
 	RemainingTickets = RemainingTickets - userTickets
 
-	// Create a map for a user
-	var userData = make(map[string]string)
-
-	userData["firstName"] = firstName
-	userData["lastName"] = lastName
-	userData["email"] = email
-	userData["noOfTickets"] = strconv.FormatUint(uint64(userTickets), 10)
+	var userData = UserData{
+		firstName:   firstName,
+		lastName:    lastName,
+		email:       email,
+		noOfTickets: userTickets,
+	}
 
 	bookings = append(bookings, userData)
 	fmt.Println("Bookings List:", bookings)
 	fmt.Printf("Booking Confirmed for %v %v.\n%v Tickets Booked. Confirmation email will be sent to %v \n", firstName, lastName, userTickets, email)
 
 	return RemainingTickets, bookings
+}
+
+func sendTickets(userTickets uint, firstName string, lastName string, email string) {
+	time.Sleep(10 * time.Second)
+	var ticket = fmt.Sprintf("%v tickets for %v %v", userTickets, firstName, lastName)
+	fmt.Println("######################")
+	fmt.Printf("Sending Tickets:\n%v \n to email address %v\n", ticket, email)
+	fmt.Println("######################")
+	wg.Done()
 }
